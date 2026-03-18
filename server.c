@@ -19,9 +19,16 @@ void accept_client(int socketfd, struct pollfd fds[], int *nfds)
 				perror("accept");
 				return;
 			}
+			if(*nfds < MAXCLI)
+			{
 			fds[*nfds].fd = clifd;
 			fds[*nfds].events = POLLIN;
 			(*nfds)++;
+			}
+			else
+			{
+				close(clifd);
+			}
 			}
 }
 
@@ -35,6 +42,11 @@ int create_server(int port)
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_addr.s_addr = INADDR_ANY;
 	int socketfd = socket(AF_INET, SOCK_STREAM, 0);
+	if(socketfd < 0)
+	{
+		perror("socket");
+		exit(1);
+	}
 
 
 	if(bind(socketfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0)
@@ -69,7 +81,7 @@ main(int argc, char *argv[])
 	struct pollfd fds[MAXCLI];
 	int nfds = 1;
 
-	bzero(&fds, sizeof(fds));
+	bzero(fds, sizeof(fds));
 	fds[0].fd = socketfd;
 	fds[0].events = POLLIN;
 	
@@ -86,21 +98,24 @@ while(1)
         	if( (n =read(fds[i].fd, buf, MAXBUF)) <= 0)
 			{
 				close(fds[i].fd);
+    			for(int k = i; k < nfds - 1; k++)
+    			{
+        			fds[k] = fds[k + 1];
+    			}
 				nfds--;
 				i--;
 			}
-
-		else
-		{
-			for(int j = 1; j < nfds; j++)
+			else
 			{
-    			if(j != i)
+				for(int j = 1; j < nfds; j++)
 				{
-        			write(fds[j].fd, buf, n);
+    				if(j != i)
+					{
+        				write(fds[j].fd, buf, n);
 									
+					}
 				}
 			}
-		}
    		}
     	else if(fds[i].revents & POLLHUP)
 		{
@@ -110,10 +125,12 @@ while(1)
         		fds[k] = fds[k + 1];
     		}
 
-    	nfds--;
-    	i--;
+    		nfds--;
+    		i--;
 		}	
 	}
 }
+}
 	return 0;
 }
+
