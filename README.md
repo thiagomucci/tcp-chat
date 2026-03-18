@@ -6,14 +6,15 @@ simple tcp chat written in C using poll for multiplexing
 - Basic message broadcasting
 ## build 
 gcc server.c -o server
+
 gcc client.c -o client
 
 ## usage
 Start server
-./server <port>
+./server `<port>`
 
 Start client
-./client <port> <ip>
+./client `<port>` `<ip>`
 
 Type in one client and see the message appear in the others
 
