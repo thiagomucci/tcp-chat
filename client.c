@@ -47,18 +47,19 @@ main(int argc, char *argv[])
 
 		if(fds[0].revents & POLLIN)
 		{
-		n = read(STDIN_FILENO, buf, MAXBUF);
-		if(n < 0)
-		{
-			perror("read");
-			exit(1);
-		}
-		if(n == 0)
-		{
-			close(sockfd);
-			exit(0);
-		}
-		write(sockfd, buf, n);
+			n = read(STDIN_FILENO, buf, MAXBUF);
+			if(n < 0)
+			{
+				perror("read");
+				exit(1);
+			}
+
+			if(n == 0)
+			{
+				close(sockfd);
+				exit(0);
+			}
+			write(sockfd, buf, n);
 		}
 
 		if(fds[1].revents & POLLIN)

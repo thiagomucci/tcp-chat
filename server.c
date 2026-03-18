@@ -11,25 +11,25 @@
 
 void accept_client(int socketfd, struct pollfd fds[], int *nfds)
 {
-			if(fds[0].revents & POLLIN)
-			{
-			int clifd = accept(socketfd,NULL,NULL);
-			if(clifd < 0)
-			{
-				perror("accept");
-				return;
-			}
-			if(*nfds < MAXCLI)
-			{
+	if(fds[0].revents & POLLIN)
+	{
+		int clifd = accept(socketfd,NULL,NULL);
+		if(clifd < 0)
+		{
+			perror("accept");
+			return;
+		}
+		if(*nfds < MAXCLI)
+		{
 			fds[*nfds].fd = clifd;
 			fds[*nfds].events = POLLIN;
 			(*nfds)++;
-			}
-			else
-			{
-				close(clifd);
-			}
-			}
+		}
+		else
+		{
+			close(clifd);
+		}
+	}
 }
 
 int create_server(int port)
@@ -48,11 +48,10 @@ int create_server(int port)
 		exit(1);
 	}
 
-
 	if(bind(socketfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) < 0)
 	{
-	perror("bind");
-	exit(1);
+		perror("bind");
+		exit(1);
 	}
 
 	if(listen(socketfd, 10) < 0)
@@ -85,38 +84,38 @@ main(int argc, char *argv[])
 	fds[0].fd = socketfd;
 	fds[0].events = POLLIN;
 	
-while(1)
-{
-	int ready = poll(fds, nfds, -1);
-	if(ready > 0)
+	while(1)
 	{
-	accept_client(socketfd, fds, &nfds);
-	for(int i = 1; i < nfds; i++)
-	{
-    	if(fds[i].revents & POLLIN)
+		int ready = poll(fds, nfds, -1);
+		if(ready > 0)
 		{
-        	if( (n =read(fds[i].fd, buf, MAXBUF)) <= 0)
+		accept_client(socketfd, fds, &nfds);
+		for(int i = 1; i < nfds; i++)
+		{
+    		if(fds[i].revents & POLLIN)
 			{
-				close(fds[i].fd);
-    			for(int k = i; k < nfds - 1; k++)
-    			{
-        			fds[k] = fds[k + 1];
-    			}
-				nfds--;
-				i--;
-			}
+        		if( (n =read(fds[i].fd, buf, MAXBUF)) <= 0)
+				{
+					close(fds[i].fd);
+    				for(int k = i; k < nfds - 1; k++)
+    				{
+        				fds[k] = fds[k + 1];
+    				}
+					nfds--;
+					i--;
+				}
+
 			else
 			{
 				for(int j = 1; j < nfds; j++)
 				{
     				if(j != i)
 					{
-        				write(fds[j].fd, buf, n);
-									
+        				write(fds[j].fd, buf, n);				
 					}
 				}
 			}
-   		}
+   			}
     	else if(fds[i].revents & POLLHUP)
 		{
     		close(fds[i].fd);
