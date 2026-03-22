@@ -1,6 +1,6 @@
 # tcp-chat
 simple tcp chat written in C using poll for multiplexing
-## freatures
+## features
 - Multiple clients support
 - TCP socket communication
 - Basic message broadcasting
