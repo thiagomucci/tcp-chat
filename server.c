@@ -9,11 +9,22 @@
 #define MAXBUF 4096
 #define MAXCLI 10
 
+struct client
+{
+	char name[32];
+	int logged;
+	char ip[16];
+} clients[MAXCLI];
+
 void accept_client(int socketfd, struct pollfd fds[], int *nfds)
 {
+
 	if(fds[0].revents & POLLIN)
 	{
-		int clifd = accept(socketfd,NULL,NULL);
+		struct sockaddr_in cliaddr;
+		socklen_t len = sizeof(cliaddr);
+
+		int clifd = accept(socketfd, (struct sockaddr *)&cliaddr, &len);
 		if(clifd < 0)
 		{
 			perror("accept");
@@ -21,6 +32,8 @@ void accept_client(int socketfd, struct pollfd fds[], int *nfds)
 		}
 		if(*nfds < MAXCLI)
 		{
+			memset(clients[*nfds].name, 0, sizeof(struct client));
+			clients[*nfds].logged = 0;
 			fds[*nfds].fd = clifd;
 			fds[*nfds].events = POLLIN;
 			(*nfds)++;
@@ -29,6 +42,8 @@ void accept_client(int socketfd, struct pollfd fds[], int *nfds)
 		{
 			close(clifd);
 		}
+		char *msg = "Welcome! Type your name: ";
+		write(clifd, msg, strlen(msg));
 	}
 }
 
@@ -74,6 +89,7 @@ main(int argc, char *argv[])
 	char buf[MAXBUF];
 	int n = 0;
 
+
 	int port = strtol(argv[1], NULL, 10);
 	int socketfd = create_server(port);
 
@@ -94,34 +110,58 @@ main(int argc, char *argv[])
 		{
     		if(fds[i].revents & POLLIN)
 			{
-        		if( (n =read(fds[i].fd, buf, MAXBUF)) <= 0)
+				memset(buf, 0, MAXBUF);
+        		if( (n = read(fds[i].fd, buf, MAXBUF)) <= 0)
 				{
 					close(fds[i].fd);
     				for(int k = i; k < nfds - 1; k++)
     				{
         				fds[k] = fds[k + 1];
+						clients[k] = clients[k + 1];
+
     				}
 					nfds--;
 					i--;
 				}
-
 			else
 			{
-				for(int j = 1; j < nfds; j++)
+				if(clients[i].logged == 0)
 				{
-    				if(j != i)
+					clients[i].logged = 1;
+					if (n > 0) 
 					{
-        				write(fds[j].fd, buf, n);				
+   						buf[n] = '\0';
+						buf[strcspn(buf, "\n\r")] = '\0';
+					}
+					if (strlen(buf) == 0) 
+					{
+        				continue; 
+    				}
+					strncpy(clients[i].name, buf, sizeof(clients[i].name) -1);
+					clients[i].name[strcspn(clients[i].name, "\n")] = '\0';
+				}
+				else
+				{
+					for(int j = 1; j < nfds; j++)
+					{
+    					if(j != i)
+						{
+							char message[MAXBUF + 100];
+							memset(message,0, sizeof(message));
+							snprintf(message, sizeof(message),"[%s]: %s", clients[i].name, buf);
+        					write(fds[j].fd, message, strlen(message));				
+						}
 					}
 				}
-			}
    			}
+			}
     	else if(fds[i].revents & POLLHUP)
 		{
     		close(fds[i].fd);
     		for(int k = i; k < nfds - 1; k++)
     		{
         		fds[k] = fds[k + 1];
+				clients[k] = clients[k + 1];
     		}
 
     		nfds--;
